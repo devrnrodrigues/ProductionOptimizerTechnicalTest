@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: production-optimizer
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/factory_db
+    username: postgres
+    password: postgres
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    open-in-view: false
