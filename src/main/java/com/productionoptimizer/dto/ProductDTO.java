@@ -3,6 +3,7 @@ package com.productionoptimizer.dto;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import java.math.BigDecimal;
 
 @Data
 @NoArgsConstructor
@@ -10,5 +11,5 @@ import lombok.AllArgsConstructor;
 public class ProductDTO {
     private Long id;
     private String name;
-    private double salePrice;
+    private BigDecimal salePrice;
 }

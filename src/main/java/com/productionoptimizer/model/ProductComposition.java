@@ -1,21 +1,28 @@
 package com.productionoptimizer.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import jakarta.validation.constraints.*;
+import lombok.*;
+
+import java.math.BigDecimal;
 
 @Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductComposition {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne
+
+    @ManyToOne(optional = false)
     private Product product;
-    @ManyToOne
+
+    @ManyToOne(optional = false)
     private RawMaterial rawMaterial;
-    private double quantityRequired;
+
+    @NotNull
+    @DecimalMin(value = "0.0", inclusive = false)
+    private BigDecimal quantityRequired;
 }
