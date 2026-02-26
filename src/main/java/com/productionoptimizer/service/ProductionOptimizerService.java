@@ -1,8 +1,12 @@
 package com.productionoptimizer.service;
 
 import com.productionoptimizer.dto.ProductionPlanResponse;
-import com.productionoptimizer.model.*;
-import com.productionoptimizer.repository.*;
+import com.productionoptimizer.model.Product;
+import com.productionoptimizer.model.ProductComposition;
+import com.productionoptimizer.model.RawMaterial;
+import com.productionoptimizer.repository.ProductCompositionRepository;
+import com.productionoptimizer.repository.ProductRepository;
+import com.productionoptimizer.repository.RawMaterialRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,16 +36,28 @@ public class ProductionOptimizerService {
         List<Product> products = productRepository.findAll();
         List<RawMaterial> materials = rawMaterialRepository.findAll();
 
+        // Current stock map
         Map<Long, BigDecimal> stockMap = materials.stream()
                 .collect(Collectors.toMap(
                         RawMaterial::getId,
                         RawMaterial::getStockQuantity
                 ));
 
+        // Calculate profit and efficiency
         List<ProductProfit> sortedProducts = products.stream()
-                .map(p -> new ProductProfit(p, calculateProfit(p)))
-                .filter(pp -> pp.profit.compareTo(BigDecimal.ZERO) > 0)
-                .sorted((a, b) -> b.profit.compareTo(a.profit))
+                .map(product -> {
+                    BigDecimal profit = calculateProfit(product);
+
+                    if (profit.compareTo(BigDecimal.ZERO) <= 0) {
+                        return null;
+                    }
+
+                    BigDecimal efficiency = calculateEfficiency(product, profit);
+
+                    return new ProductProfit(product, profit, efficiency);
+                })
+                .filter(Objects::nonNull)
+                .sorted((a, b) -> b.efficiency.compareTo(a.efficiency))
                 .toList();
 
         List<ProductionPlanResponse> response = new ArrayList<>();
@@ -80,6 +96,26 @@ public class ProductionOptimizerService {
         }
 
         return product.getSalePrice().subtract(totalCost);
+    }
+
+    private BigDecimal calculateEfficiency(Product product,
+                                           BigDecimal profit) {
+
+        List<ProductComposition> compositions =
+                compositionRepository.findByProductId(product.getId());
+
+        BigDecimal totalMaterialUsed = BigDecimal.ZERO;
+
+        for (ProductComposition comp : compositions) {
+            totalMaterialUsed = totalMaterialUsed
+                    .add(comp.getQuantityRequired());
+        }
+
+        if (totalMaterialUsed.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+
+        return profit.divide(totalMaterialUsed, 4, RoundingMode.HALF_UP);
     }
 
     private int calculateMaxProduction(Product product,
@@ -131,12 +167,17 @@ public class ProductionOptimizerService {
     }
 
     private static class ProductProfit {
+
         Product product;
         BigDecimal profit;
+        BigDecimal efficiency;
 
-        public ProductProfit(Product product, BigDecimal profit) {
+        public ProductProfit(Product product,
+                             BigDecimal profit,
+                             BigDecimal efficiency) {
             this.product = product;
             this.profit = profit;
+            this.efficiency = efficiency;
         }
     }
 }

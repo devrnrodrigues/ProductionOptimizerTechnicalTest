@@ -17,7 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,8 +35,8 @@ class ProductionOptimizerServiceTest {
     @InjectMocks
     private ProductionOptimizerService service;
 
-    private Product productA;
     private RawMaterial material;
+    private Product productA;
 
     @BeforeEach
     void setup() {
@@ -73,13 +73,63 @@ class ProductionOptimizerServiceTest {
     }
 
     @Test
-    void shouldProduceProductWithPositiveProfit() {
+    void shouldCalculateCorrectProductionQuantityAndProfit() {
 
         List<ProductionPlanResponse> result =
                 service.optimizeProduction();
 
         assertEquals(1, result.size());
-        assertEquals("Product A",
+
+        ProductionPlanResponse response = result.get(0);
+
+        assertEquals("Product A", response.getProductName());
+
+        assertEquals(50, response.getQuantityToProduce());
+
+        assertEquals(
+                BigDecimal.valueOf(4000),
+                response.getExpectedProfit()
+        );
+    }
+
+    @Test
+    void shouldNotProduceIfProfitIsNegative() {
+
+        productA.setSalePrice(BigDecimal.valueOf(10));
+
+        List<ProductionPlanResponse> result =
+                service.optimizeProduction();
+
+        assertEquals(0, result.size());
+    }
+
+    @Test
+    void shouldPrioritizeHigherProfitProduct() {
+
+        Product productB = new Product(
+                2L,
+                "Product B",
+                BigDecimal.valueOf(150)
+        );
+
+        ProductComposition compB =
+                new ProductComposition(
+                        2L,
+                        productB,
+                        material,
+                        BigDecimal.valueOf(2)
+                );
+
+        when(productRepository.findAll())
+                .thenReturn(List.of(productA, productB));
+
+        when(compositionRepository.findByProductId(2L))
+                .thenReturn(List.of(compB));
+
+        List<ProductionPlanResponse> result =
+                service.optimizeProduction();
+
+        assertEquals("Product B",
                 result.get(0).getProductName());
     }
 }

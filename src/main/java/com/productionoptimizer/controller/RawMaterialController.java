@@ -2,15 +2,20 @@ package com.productionoptimizer.controller;
 
 import com.productionoptimizer.model.RawMaterial;
 import com.productionoptimizer.service.RawMaterialService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/raw-materials")
 public class RawMaterialController {
-    @Autowired
-    private RawMaterialService rawMaterialService;
+
+    private final RawMaterialService rawMaterialService;
+
+    public RawMaterialController(RawMaterialService rawMaterialService) {
+        this.rawMaterialService = rawMaterialService;
+    }
 
     @GetMapping
     public List<RawMaterial> getAll() {
@@ -23,12 +28,13 @@ public class RawMaterialController {
     }
 
     @PostMapping
-    public RawMaterial create(@RequestBody RawMaterial rawMaterial) {
+    public RawMaterial create(@Valid @RequestBody RawMaterial rawMaterial) {
         return rawMaterialService.save(rawMaterial);
     }
 
     @PutMapping("/{id}")
-    public RawMaterial update(@PathVariable Long id, @RequestBody RawMaterial rawMaterial) {
+    public RawMaterial update(@PathVariable Long id,
+                              @Valid @RequestBody RawMaterial rawMaterial) {
         return rawMaterialService.update(id, rawMaterial);
     }
 
