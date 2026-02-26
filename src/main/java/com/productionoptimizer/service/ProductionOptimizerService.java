@@ -36,14 +36,12 @@ public class ProductionOptimizerService {
         List<Product> products = productRepository.findAll();
         List<RawMaterial> materials = rawMaterialRepository.findAll();
 
-        // Current stock map
         Map<Long, BigDecimal> stockMap = materials.stream()
                 .collect(Collectors.toMap(
                         RawMaterial::getId,
                         RawMaterial::getStockQuantity
                 ));
 
-        // Calculate profit and efficiency
         List<ProductProfit> sortedProducts = products.stream()
                 .map(product -> {
                     BigDecimal profit = calculateProfit(product);
@@ -52,12 +50,10 @@ public class ProductionOptimizerService {
                         return null;
                     }
 
-                    BigDecimal efficiency = calculateEfficiency(product, profit);
-
-                    return new ProductProfit(product, profit, efficiency);
+                    return new ProductProfit(product, profit);
                 })
                 .filter(Objects::nonNull)
-                .sorted((a, b) -> b.efficiency.compareTo(a.efficiency))
+                .sorted((a, b) -> b.product.getSalePrice().compareTo(a.product.getSalePrice()))
                 .toList();
 
         List<ProductionPlanResponse> response = new ArrayList<>();
@@ -96,26 +92,6 @@ public class ProductionOptimizerService {
         }
 
         return product.getSalePrice().subtract(totalCost);
-    }
-
-    private BigDecimal calculateEfficiency(Product product,
-                                           BigDecimal profit) {
-
-        List<ProductComposition> compositions =
-                compositionRepository.findByProductId(product.getId());
-
-        BigDecimal totalMaterialUsed = BigDecimal.ZERO;
-
-        for (ProductComposition comp : compositions) {
-            totalMaterialUsed = totalMaterialUsed
-                    .add(comp.getQuantityRequired());
-        }
-
-        if (totalMaterialUsed.compareTo(BigDecimal.ZERO) == 0) {
-            return BigDecimal.ZERO;
-        }
-
-        return profit.divide(totalMaterialUsed, 4, RoundingMode.HALF_UP);
     }
 
     private int calculateMaxProduction(Product product,
@@ -170,14 +146,10 @@ public class ProductionOptimizerService {
 
         Product product;
         BigDecimal profit;
-        BigDecimal efficiency;
 
-        public ProductProfit(Product product,
-                             BigDecimal profit,
-                             BigDecimal efficiency) {
+        public ProductProfit(Product product, BigDecimal profit) {
             this.product = product;
             this.profit = profit;
-            this.efficiency = efficiency;
         }
     }
 }
